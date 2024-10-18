@@ -1,26 +1,73 @@
 pipeline {
 	agent any
+
 	options {
-		buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5')
 		disableConcurrentBuilds()
 	}
+
 	stages {
-		stage('Say Hello') {
+		stage("Unit Tests") {
 			steps {
-				echo "Hello"
+				script {
+					try {
+						if (isUnix()) {
+							sh(script: "./gradlew clean test --console=plain --no-daemon")
+						}
+						else {
+							bat(script: "./gradlew clean test --console=plain --no-daemon")
+						}
+
+						junit "**/build/test-results/test/*.xml"
+					}
+					catch (Exception exception) {
+						echo "Exception: " + exception.toString()
+					}
+					finally {
+						echo "Ran Unit Tests"
+					}
+				}
 			}
 		}
-		stage('Run test script') {
+
+		stage("Integration Tests") {
 			steps {
-				sh './jenkins-test.sh'
+				script {
+					try {
+						if (isUnix()) {
+							sh(script: "./gradlew clean testIntegration --console=plain --no-daemon")
+						}
+						else {
+							bat(script: "./gradlew clean testIntegration --console=plain --no-daemon")
+						}
+					}
+					catch (Exception exception) {
+						echo "Exception: " + exception.toString()
+					}
+					finally {
+						echo "Ran Integration Tests"
+					}
+				}
 			}
 		}
-		stage('Run integration tests') {
+
+		stage("Playwright Tests") {
 			steps {
-				sh "./run-tests.sh"
-			}
-			when {
-				branch 'PR-*'
+				script {
+					try {
+						if (isUnix()) {
+							sh(script: "./gradlew clean playwright:packageRunTestAll --console=plain --no-daemon")
+						}
+						else {
+							bat(script: "./gradlew clean playwright:packageRunTestAll --console=plain --no-daemon")
+						}
+					}
+					catch (Exception exception) {
+						echo "Exception: " + exception.toString()
+					}
+					finally {
+						echo "Ran Playwright Tests"
+					}
+				}
 			}
 		}
 	}
